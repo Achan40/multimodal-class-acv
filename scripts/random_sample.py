@@ -21,8 +21,8 @@ def random_sample_directories(source_dir, destination_dir, num_samples):
         print(f"Copied '{directory}' to '{destination_dir}'")
 
 # Example usage
-source_directory = "data/one/"
-destination_directory = "data/testing/"
+source_directory = "data/CheXpert-v1.0/"
+destination_directory = "data/dev/"
 num_samples = 2
 
 random_sample_directories(source_directory, destination_directory, num_samples)

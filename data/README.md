@@ -1,0 +1,1 @@
+Drop your cheXpert dataset here in the `data` folder. Note: change the variables in the `random_sample.py` to suit your puposes if needed.
