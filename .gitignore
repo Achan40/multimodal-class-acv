@@ -164,5 +164,7 @@ cython_debug/
 # Ignore raw CheXpert dataset
 data/CheXpert-v1.0 
 
-# Ignore dataset used for development
+# Ignore datasets
 data/dev
+data/predev
+
