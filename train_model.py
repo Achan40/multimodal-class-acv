@@ -3,11 +3,14 @@ import pickle
 import torch
 import numpy as np
 import argparse
+import matplotlib.pyplot as plt
+from apex import amp
 
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from models.modeling_irene import IRENE, CONFIGS
 from torchvision import transforms, utils
+from tqdm import tqdm
 
 class Data(Dataset):
     def __init__(self, set_type, img_dir, transform=None, target_transform=None):
@@ -49,12 +52,62 @@ def train_model():
         ]),
     }
 
+    num_classes = args.CLS
+    config = CONFIGS["IRENE"]
     img_dir = args.DATA_DIR
 
-    data = Data(args.SET_TYPE, img_dir, transform=data_transforms['test'])
+    # token limit for unstructured textual data
+    tk_lim = 40
 
-    return data
-    
+    # Create Dataset and DataLoader object
+    data = Data(args.SET_TYPE, img_dir, transform=data_transforms['test'])
+    loader = DataLoader(data, batch_size=args.BSZ, shuffle=False, num_workers=16, pin_memory=True)
+
+    # create model object and optimizer
+    model = IRENE(config, 224, zero_head=True, num_classes=num_classes)
+
+    if torch.cuda.is_available():
+        model.cuda()
+
+    optimizer_irene = torch.optim.AdamW(model.parameters(), lr=3e-5, weight_decay=0.01)
+
+    # Using nvidia apex for optimization
+    #model, optimizer_irene = amp.initialize(model.cuda(), optimizer_irene, opt_level="O1")
+
+    # define loss function
+    loss_fn = torch.nn.BCELoss()
+
+    model.train()
+    for epoch in range(1):
+        for item in tqdm(loader):
+        # get the inputs; data is a list of [inputs, labels]
+            imgs, labels, cc, demo, lab = item
+
+            print(cc.shape)
+            imgs = imgs.cuda(non_blocking=True)
+            labels = labels.cuda(non_blocking=True)
+            cc = cc.view(-1, tk_lim, cc.shape[3]).cuda(non_blocking=True).float()
+            demo = demo.view(-1, 1, demo.shape[1]).cuda(non_blocking=True).float()
+            lab = lab.view(-1, lab.shape[1], 1).cuda(non_blocking=True).float()
+            sex = demo[:, :, 1].view(-1, 1, 1).cuda(non_blocking=True).float()
+            age = demo[:, :, 0].view(-1, 1, 1).cuda(non_blocking=True).float()
+
+            print(cc.shape)
+
+            preds = model(imgs, cc, lab, sex, age)[0]
+
+            # probability values
+            probs = torch.sigmoid(preds)
+
+            loss = loss_fn(probs, labels)
+            print(loss)
+
+            #optimizer_irene.zero_grad()
+            # with optimizer_irene.scale_loss(loss) as scaled_loss:
+            #     scaled_loss.backward()
+
+            #loss.backward()
+            #optimizer_irene.step()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")
@@ -63,8 +116,23 @@ if __name__ == '__main__':
     parser.add_argument('--DATA_DIR', action='store', dest='DATA_DIR', required=True, type=str)
     parser.add_argument('--SET_TYPE', action='store', dest='SET_TYPE', required=True, type=str)
     args = parser.parse_args()
+    
+    train_model()
 
-    data_tmp = train_model()
-    print(data_tmp.idx_list)
-    print(data_tmp.mm_data['patient00001/study1/view1_frontal'])
-    print(data_tmp[1])
+    # Showing the image
+    # data_iter = iter(loader)
+    # images = next(data_iter)
+
+    # images_np = np.array(images[0][0])
+
+    # def show_image(image_np):
+    #     plt.imshow(image_np)
+    #     plt.axis('off')
+    #     plt.show()
+
+    # Assuming you want to show the first image in the batch
+    # show_image(images_np[0])
+
+    # print(data_tmp.idx_list)
+    # print(data_tmp.mm_data['patient00001/study1/view1_frontal'])
+    # print(data_tmp['patient00001/study1/view1_frontal'])

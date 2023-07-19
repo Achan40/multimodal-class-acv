@@ -67,10 +67,11 @@ class Embeddings(nn.Module):
     def forward(self, x, cc, lab, sex, age):
         B = x.shape[0]
         cls_tokens = self.cls_token.expand(B, -1, -1)
-
         if self.hybrid:
             x = self.hybrid_model(x)
+
         x = self.patch_embeddings(x) # 16*16 --> CNN --> 1*1
+
         cc = self.cc_embeddings(cc)
         lab = self.lab_embeddings(lab)
         sex = self.sex_embeddings(sex)
