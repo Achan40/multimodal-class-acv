@@ -43,6 +43,13 @@ class Data(Dataset):
         lab = torch.from_numpy(self.mm_data[k]['bts']).float()
         return img, label, cc, demo, lab
     
+# Use to check if our .pkl files were created correctly
+def check_pkl(dict_path):
+    f = open(dict_path, 'rb') 
+    data = pickle.load(f)
+    f.close()
+    return data
+    
 def train_model():
     data_transforms = {
         'test': transforms.Compose([
