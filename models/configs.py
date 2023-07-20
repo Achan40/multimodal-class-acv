@@ -28,5 +28,5 @@ def get_IRENE_config():
     config.classifier = 'token'
     config.representation_size = None
     config.cc_len = 40
-    config.lab_len = 4
+    config.lab_len = 14
     return config

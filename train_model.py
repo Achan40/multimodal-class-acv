@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 class Data(Dataset):
     def __init__(self, set_type, img_dir, transform=None, target_transform=None):
-        dict_path = set_type+'.pkl'
+        dict_path = set_type
         f = open(dict_path, 'rb') 
         self.mm_data = pickle.load(f)
         f.close()
@@ -28,7 +28,7 @@ class Data(Dataset):
 
     def __getitem__(self, idx):
         k = self.idx_list[idx]
-        img_path = os.path.join(self.img_dir, k) + '.jpg'
+        img_path = os.path.join(self.img_dir, k)
         img = Image.open(img_path).convert('RGB')
 
         label = self.mm_data[k]['label'].astype('float32')
@@ -78,12 +78,11 @@ def train_model():
     loss_fn = torch.nn.BCELoss()
 
     model.train()
-    for epoch in range(1):
+    for epoch in range(5):
         for item in tqdm(loader):
         # get the inputs; data is a list of [inputs, labels]
             imgs, labels, cc, demo, lab = item
 
-            print(cc.shape)
             imgs = imgs.cuda(non_blocking=True)
             labels = labels.cuda(non_blocking=True)
             cc = cc.view(-1, tk_lim, cc.shape[3]).cuda(non_blocking=True).float()
@@ -92,22 +91,21 @@ def train_model():
             sex = demo[:, :, 1].view(-1, 1, 1).cuda(non_blocking=True).float()
             age = demo[:, :, 0].view(-1, 1, 1).cuda(non_blocking=True).float()
 
-            print(cc.shape)
-
             preds = model(imgs, cc, lab, sex, age)[0]
 
             # probability values
             probs = torch.sigmoid(preds)
 
             loss = loss_fn(probs, labels)
-            print(loss)
 
-            #optimizer_irene.zero_grad()
+            optimizer_irene.zero_grad()
             # with optimizer_irene.scale_loss(loss) as scaled_loss:
             #     scaled_loss.backward()
 
-            #loss.backward()
-            #optimizer_irene.step()
+            loss.backward()
+            optimizer_irene.step()
+
+        print("Training Loss: ",loss.item())
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="")

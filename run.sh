@@ -1,1 +1,1 @@
-python -W ignore train_model.py --CLS 8 --BSZ 2 --DATA_DIR ./data/predev/train --SET_TYPE ./data/predev/dct
+python -W ignore train_model.py --CLS 14 --BSZ 2 --DATA_DIR ./data/predev/ --SET_TYPE ./data/predev/train.pkl
