@@ -9,11 +9,11 @@ Note: The easiest way to download the validation and test dataset is by using [A
 ### 1. Directory and File Structure
 After downloading the CheXpert dataset, place the train/valid/test directories and their corresponding .csv files into the data directory. Rename .csv files accordingly. 
 
--data
---train
---valid
---train.csv
---valid.csv
+-data <br>
+--train <br>
+--valid <br>
+--train.csv <br>
+--valid.csv <br>
 
 ### 2. Generate Test Set
 While located in this repositories root directory in your python shell, edit and run the `split_train.py` script.
