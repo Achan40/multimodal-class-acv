@@ -275,47 +275,28 @@ def test():
          
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="")
+    parser = argparse.ArgumentParser(description="Parser for model training and testing")
+    subparsers = parser.add_subparsers(dest="subcommand", help="Choose -train or -test")
+
+    # positional arguements required for both train and test functions. 
     parser.add_argument('--BSZ', action='store', dest='BSZ', required=True, type=int) # batch size
-    parser.add_argument('--EPCHS', action='store', dest='EPCHS', required=True, type=int) # number of epochs
-
     parser.add_argument('--DATA_DIR', action='store', dest='DATA_DIR', required=True, type=str) # parent directory to your train, valid, test image folders
-    parser.add_argument('--TRN_LAB_SET', action='store', dest='TRN_LAB_SET', required=False, type=str) # path to train.pkl file
-    parser.add_argument('--VAL_LAB_SET', action='store', dest='VAL_LAB_SET', required=False, type=str) # path to valid.pkl file
-    parser.add_argument('--TST_LAB_SET', action='store', dest='TST_LAB_SET', required=False, type=str) # path to test.pkl file
 
-    parser.add_argument('--SAVED_MOD', action='store', dest='SAVED_MOD', required=False, type=str) # path to test.pkl file
+    # conditional arguements based on whether we want to train the model or make predictions on a test set
+    parser_train = subparsers.add_parser('train')
+    parser_train.add_argument('--TRN_LAB_SET', action='store', dest='TRN_LAB_SET', required=True, type=str) # path to train.pkl file
+    parser_train.add_argument('--VAL_LAB_SET', action='store', dest='VAL_LAB_SET', required=True, type=str) # path to valid.pkl file
+    parser_train.add_argument('--EPCHS', action='store', dest='EPCHS', required=True, type=int) # number of epochs
+
+    parser_test = subparsers.add_parser('test')
+    parser_test.add_argument('--TST_LAB_SET', action='store', dest='TST_LAB_SET', required=True, type=str) # path to test.pkl file
+    parser_test.add_argument('--SAVED_MOD', action='store', dest='SAVED_MOD', required=True, type=str) # path to test.pkl file
 
     args = parser.parse_args()
 
-    test()
-
-    # data_transforms = {
-    #         'test': transforms.Compose([
-    #             transforms.Resize(256),
-    #             transforms.CenterCrop(224),
-    #             transforms.ToTensor(),
-    #         ]),
-    #     }
-    # img_dir = args.DATA_DIR
-    # val_data = Data(args.VAL_LAB_SET, img_dir, transform=data_transforms['test'])
-    
-    # print(val_data.idx_list)
-
-    # Showing the image
-    # data_iter = iter(loader)
-    # images = next(data_iter)
-
-    # images_np = np.array(images[0][0])
-
-    # def show_image(image_np):
-    #     plt.imshow(image_np)
-    #     plt.axis('off')
-    #     plt.show()
-
-    # Assuming you want to show the first image in the batch
-    # show_image(images_np[0])
-
-    # print(data_tmp.idx_list)
-    # print(data_tmp.mm_data['patient00001/study1/view1_frontal'])
-    # print(data_tmp['patient00001/study1/view1_frontal'])
+    if args.subcommand == 'train':
+        train()
+    elif args.subcommand == 'test':
+        test()
+    else:
+        print('No -train or -test flag provided')
