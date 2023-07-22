@@ -60,8 +60,8 @@ def create_dct(df, arr):
 
         # test.pkl will need to get index from train.csv, have to retrieve by key first.
         if 'test' in p:
-            p = convert_path(path, offset=-3)
-            key = 'CheXpert-v1.0/train/' + p
+            new_p = convert_path(path, offset=-3)
+            key = 'CheXpert-v1.0/train/' + new_p
 
         row = df.loc[df['Path'] == key].to_dict()
         row_ind = df.loc[df['Path'] == key].index.item()
@@ -91,7 +91,7 @@ Run multiple times for your train, validation and test sets.
 '''
 if __name__ == "__main__":
 
-    d_set = 'train' # the set you want to create a .pkl file for
+    d_set = 'test' # the set you want to create a .pkl file for
     d_file = 'train.csv' # point to your textual datafile. Train and test will use the same one.
 
     arr = image_path('./data/predev/'+d_set)

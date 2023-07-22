@@ -168,3 +168,5 @@ data/CheXpert-v1.0
 data/dev
 data/predev
 
+# Ignore model checkpoints
+checkpoints/
