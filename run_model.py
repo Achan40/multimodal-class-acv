@@ -4,8 +4,8 @@ import torch
 import numpy as np
 import argparse
 import matplotlib.pyplot as plt
-from apex import amp
 
+from multiprocessing import Manager
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
 from models.modeling_irene import IRENE, CONFIGS
@@ -24,9 +24,15 @@ disease_list = ['Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
 class Data(Dataset):
     def __init__(self, set_type, img_dir, transform=None, target_transform=None):
         dict_path = set_type
+
+        # wrap dicts in Manager object
+        # This deals with the copy-on-access problem of forked python processes due to changing refcounts since we use a standard python dict for our data object. 
+        # If we don't do this, the num_workers parameter in our dataloader object will duplicate memory for each worker
+        manager = Manager()
         f = open(dict_path, 'rb') 
-        self.mm_data = pickle.load(f)
+        self.mm_data = manager.dict(pickle.load(f))
         f.close()
+
         self.idx_list = list(self.mm_data.keys())
         self.img_dir = img_dir
         self.transform = transform
@@ -118,11 +124,11 @@ def train():
 
     # Create Train Dataset and DataLoader object
     data = Data(args.TRN_LAB_SET, img_dir, transform=data_transforms['test'])
-    loader = DataLoader(data, batch_size=args.BSZ, shuffle=False, num_workers=16, pin_memory=True)
+    loader = DataLoader(data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
     # Create Validation Dataset and Dataloader object
     val_data = Data(args.VAL_LAB_SET, img_dir, transform=data_transforms['test'])
-    val_loader = DataLoader(val_data, batch_size=args.BSZ, shuffle=False, num_workers=16, pin_memory=True)
+    val_loader = DataLoader(val_data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
     # create model object and optimizer
     model = IRENE(config, 224, zero_head=True, num_classes=num_classes)
@@ -219,6 +225,7 @@ def train():
         f"Validation Loss: {val_loss:.4f}, ")
 
         print('Mean AUROC:' + str(aurocMean))
+        torch.cuda.empty_cache()
 
 def test():
     data_transforms = {
@@ -234,7 +241,7 @@ def test():
 
     # Create Train Dataset and DataLoader object
     test_data = Data(args.TST_LAB_SET, img_dir, transform=data_transforms['test'])
-    test_loader = DataLoader(test_data, batch_size=args.BSZ, shuffle=False, num_workers=16, pin_memory=True)
+    test_loader = DataLoader(test_data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
     # load a saved model
     model = torch.load(args.SAVED_MOD)

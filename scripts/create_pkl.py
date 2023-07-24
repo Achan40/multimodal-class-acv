@@ -116,7 +116,7 @@ def save_dict_iterative(arr, file_path, splits=1):
                 'bics': np.array([row['Sex'][row_ind], row['Age'][row_ind]]), # Structured Data
                 'bts': np.array([row['Frontal/Lateral'][row_ind]]), # Structured Data
                 'label': np.array([row[i][row_ind] for i in labels]) # Labels
-            } 
+            }
 
         save_dict_to_pkl(d, file_path)
 '''
