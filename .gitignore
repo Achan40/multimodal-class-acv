@@ -167,6 +167,7 @@ data/CheXpert-v1.0
 # Ignore datasets
 data/dev
 data/predev
+data/actual
 
 # Ignore model checkpoints
 checkpoints/
