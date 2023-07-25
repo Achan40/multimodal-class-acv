@@ -12,8 +12,10 @@ Note that the CheXpert dataset that is being used does not contain unstructured 
 make changes to this code to fit your own dataset.
 '''
 
-# Returns a list of paths to all images in a specified directory
 def image_path(folder_path):
+    '''
+    Returns a list of paths to all images in a specified directory
+    '''
     file_paths = []
     path = Path(folder_path)
     for file_path in tqdm(path.rglob('*')):
@@ -21,8 +23,12 @@ def image_path(folder_path):
             file_paths.append(str(file_path))
     return file_paths
 
-# Returns the relevant portion of some path. Very specific to the way our dataset is structured
+
 def convert_path(input_path, offset=-4):
+    '''
+    Returns the relevant portion of some path. Very specific to the way our dataset is structured
+    '''
+
     # Replace backslashes with forward slashes
     updated_path = input_path.replace('\\', '/')
 
@@ -31,17 +37,23 @@ def convert_path(input_path, offset=-4):
 
     return relevant_part
 
-# Data wrangling. Converting some columns to binary.
 def data_wrangling(file):
+    '''
+    Data wrangling. Converting some columns to binary.
+    '''
     df = pd.read_csv(file)
 
-    df["Sex"] = df["Sex"].replace({'Male': 1, 'Female': 0, 'Unknown': 1}) # generate binary indicators
+    # generate binary indicators
+    df["Sex"] = df["Sex"].replace({'Male': 1, 'Female': 0, 'Unknown': 1}) 
     df["Frontal/Lateral"] = df["Frontal/Lateral"].replace({'Frontal': 1, 'Lateral': 0}) 
 
     return df
 
-# Load the existing dictionary (or create an empty one if the file is not found)
+
 def load_dict_from_pkl(file_path):
+    '''
+    Load the existing dictionary (or create an empty one if the file is not found)
+    '''
     try:
         with open(file_path, 'rb') as file:
             data = pickle.load(file)
@@ -49,14 +61,21 @@ def load_dict_from_pkl(file_path):
     except FileNotFoundError:
         return {}
     
-# Save the updated dictionary back to the .pkl file
+
 def save_to_pkl(data, file_path):
+    '''
+    Save the updated dictionary back to the .pkl file
+    '''
     with open(file_path, 'wb') as file:
         pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL)
 
-# Dividing an array into equal parts
-# Use so that we can write to our .pkl file in batches
+
 def divide_array_equal_parts(arr, num_parts):
+    '''
+    Dividing an array into equal parts
+    Use so that we can write to our .pkl file in batches
+    '''
+
     if num_parts <= 0:
         raise ValueError("Number of parts should be greater than 0.")
 
@@ -73,8 +92,13 @@ def divide_array_equal_parts(arr, num_parts):
 
     return divided_array
 
-# Writing and saving data iteratively to .pkl file
+
 def save_dict_iterative(arr, file_path, splits=1):
+    '''
+    Writing and saving data iteratively to .pkl file
+    Takes in an array of paths, the file path we want to write to, and the 
+    number of write iterations
+    '''
 
     # arr will now look something like [[path,path,path],[path,path,path],...]
     m_arr = divide_array_equal_parts(arr, splits)
@@ -119,6 +143,7 @@ def save_dict_iterative(arr, file_path, splits=1):
             }
 
         save_to_pkl(d, file_path)
+
 '''
 See README.md in the data folder for additional notes on directory structure.
 Running this script will output a .pkl file you can pass as input to the model.
@@ -134,7 +159,7 @@ if __name__ == "__main__":
     #save_to_pkl(arr,d_path+d_set+'_arr.pkl')
     arr = load_dict_from_pkl(d_path+d_set+'_arr.pkl')
 
-    df = data_wrangling(d_path+d_file) 
+    df = data_wrangling(d_path+d_file)
 
     save_dict_iterative(arr=arr, file_path=d_path+d_set+'.pkl', splits=100)
     
