@@ -1,20 +1,19 @@
 import os
 import pickle
-import torch
-import numpy as np
 import argparse
-import matplotlib.pyplot as plt
-
 from multiprocessing import Manager
+import numpy as np
+import torch
+
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
-from models.modeling_irene import IRENE, CONFIGS
-from torchvision import transforms, utils
+from torchvision import transforms
 from tqdm import tqdm
 from sklearn.metrics import roc_auc_score
+from models.modeling_irene import IRENE, CONFIGS
 
 # token limit for unstructured textual data
-tk_lim = 40
+TK_LIM = 40
 
 disease_list = ['Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
        'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis',
@@ -22,11 +21,19 @@ disease_list = ['Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
        'Support Devices', 'No Finding']
 
 class Data(Dataset):
+    '''
+    Takes in a sturctured data formatted as a python dictionary,
+    path to a directory of images, and any tranformations that need to be performed
+    '''
     def __init__(self, d_set, img_dir, transform=None, target_transform=None):
-        # wrap dicts in Manager object
-        # This deals with the copy-on-access problem of forked python processes due to changing refcounts since we use a standard python dict for our data object. 
-        # If we don't do this, the num_workers parameter in our dataloader object will duplicate memory for each worker
-        # Note: There is an issue in windows with multiprocessing where the Manager() cannot handle large dictionaries. Had to use a wsl to run training without issue
+        ''' Wrap dicts in Manager object. This deals with the copy-on-access problem of 
+        forked python processes since we use a standard python dict for our data object. 
+        If we don't do this, the num_workers parameter 
+        in our dataloader object will duplicate memory for each worker. 
+        Note: There is an issue in windows with multiprocessing where the 
+        Manager() cannot handle large dictionaries. 
+        Had to run in linux to run train without issue
+        '''
         manager = Manager()
         self.mm_data = manager.dict(d_set)
         self.idx_list = manager.list(self.mm_data.keys())
@@ -53,37 +60,45 @@ class Data(Dataset):
         demo = torch.from_numpy(np.array(self.mm_data[k]['bics'])).float()
         lab = torch.from_numpy(self.mm_data[k]['bts']).float()
         return img, label, cc, demo, lab
-    
-# Use to load our pkl dictionaries
+
 def load_pkl(dict_path):
-    f = open(dict_path, 'rb') 
+    '''
+    Takes in a path to a .pkl file
+    and saves the data as a variable
+    '''
+    f = open(dict_path, 'rb')
     data = pickle.load(f)
     f.close()
     return data
 
-#  computing AUROC values
-def computeAUROC (dataGT, dataPRED, classCount=14):
-    outAUROC = []
-        
-    datanpGT = dataGT.cpu().numpy()
-    datanpPRED = dataPRED.cpu().numpy()
-        
-    for i in range(classCount):
-        # If is only one unique value in a column of our true labels, append NA, otherwise roc_auc cannot be computed
-        if len(np.unique(datanpGT[:,i])) <= 1:
-            outAUROC.append(np.nan)
-        else:
-            outAUROC.append(roc_auc_score(datanpGT[:, i], datanpPRED[:, i]))
-            
-    return outAUROC
+def compute_auroc(data_gt, data_pred, classCount=14):
+    '''
+    Comput auroc values using true values and
+    probabilites for each class predicition
+    '''
+    out_auroc = []
+    data_np_gt = data_gt.cpu().numpy()
+    data_np_pred = data_pred.cpu().numpy()
 
-# return predictions and labels for some item in our dataloader object
+    for i in range(classCount):
+        # If is only one unique value in a column of our true labels, append NA.
+        # Cannot compute roc_auc otherwise
+        if len(np.unique(data_np_gt[:,i])) <= 1:
+            out_auroc.append(np.nan)
+        else:
+            out_auroc.append(roc_auc_score(data_np_gt[:, i], data_np_pred[:, i]))
+        return out_auroc
+
 def item_preds(item, model):
+    '''
+    Takes in a list(batch) of items and the model.
+    Then generate predictions and return the predictions and true labels for each
+    '''
     imgs, labels, cc, demo, lab = item
 
     imgs = imgs.cuda(non_blocking=True)
     labels = labels.cuda(non_blocking=True)
-    cc = cc.view(-1, tk_lim, cc.shape[3]).cuda(non_blocking=True).float()
+    cc = cc.view(-1, TK_LIM, cc.shape[3]).cuda(non_blocking=True).float()
     demo = demo.view(-1, 1, demo.shape[1]).cuda(non_blocking=True).float()
     lab = lab.view(-1, lab.shape[1], 1).cuda(non_blocking=True).float()
     sex = demo[:, :, 1].view(-1, 1, 1).cuda(non_blocking=True).float()
@@ -93,19 +108,11 @@ def item_preds(item, model):
 
     return preds, labels
 
-# function for loading weights
-def load_weights(model, weight_path):
-    pretrained_weights = torch.load(weight_path, map_location=torch.device('cpu'))
-    model_weights = model.state_dict()
-
-    load_weights = {k: v for k, v in pretrained_weights.items() if k in model_weights}
-
-    model_weights.update(load_weights)
-    model.load_state_dict(model_weights)
-    print("Loading Model...")
-    return model
-
 def train():
+    '''
+    Function for training IRENE.
+    Parameters for this function comes from the passed in args
+    '''
     data_transforms = {
         'test': transforms.Compose([
             transforms.Resize(256),
@@ -174,7 +181,7 @@ def train():
             optimizer_irene.step()
 
         # calculate AUROC
-        aurocIndividual = computeAUROC(outGT, outPRED, classCount=num_classes)
+        aurocIndividual = compute_auroc(outGT, outPRED, classCount=num_classes)
         aurocMean = np.nanmean(np.array(aurocIndividual))
         
         print(f"Epoch {epoch+1}/{args.EPCHS}, "
@@ -216,7 +223,7 @@ def train():
         val_loss /= len(val_loader)
 
         # calculate AUROC
-        aurocIndividual = computeAUROC(outGT, outPRED, classCount=num_classes)
+        aurocIndividual = compute_auroc(outGT, outPRED, classCount=num_classes)
         aurocMean = np.nanmean(np.array(aurocIndividual))
         
         # show auroc for each class
@@ -230,6 +237,10 @@ def train():
         torch.cuda.empty_cache()
 
 def test():
+    '''
+    Function for testing our saved model.
+    Parameters for this function comes from the passed in args
+    '''
     data_transforms = {
         'test': transforms.Compose([
             transforms.Resize(256),
@@ -273,7 +284,7 @@ def test():
             outPRED = torch.cat((outPRED, probs.data), 0)
 
     # calculate AUROC
-    aurocIndividual = computeAUROC(outGT, outPRED, classCount=num_classes)
+    aurocIndividual = compute_auroc(outGT, outPRED, classCount=num_classes)
     aurocMean = np.nanmean(np.array(aurocIndividual))
     
     # show auroc for each class
