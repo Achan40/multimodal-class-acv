@@ -22,18 +22,14 @@ disease_list = ['Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
        'Support Devices', 'No Finding']
 
 class Data(Dataset):
-    def __init__(self, set_type, img_dir, transform=None, target_transform=None):
-        dict_path = set_type
-
+    def __init__(self, d_set, img_dir, transform=None, target_transform=None):
         # wrap dicts in Manager object
         # This deals with the copy-on-access problem of forked python processes due to changing refcounts since we use a standard python dict for our data object. 
         # If we don't do this, the num_workers parameter in our dataloader object will duplicate memory for each worker
+        # Note: There is an issue in windows with multiprocessing where the Manager() cannot handle large dictionaries. Had to use a wsl to run training without issue
         manager = Manager()
-        f = open(dict_path, 'rb') 
-        self.mm_data = manager.dict(pickle.load(f))
-        f.close()
-
-        self.idx_list = list(self.mm_data.keys())
+        self.mm_data = manager.dict(d_set)
+        self.idx_list = manager.list(self.mm_data.keys())
         self.img_dir = img_dir
         self.transform = transform
         self.target_transform = target_transform
@@ -58,8 +54,8 @@ class Data(Dataset):
         lab = torch.from_numpy(self.mm_data[k]['bts']).float()
         return img, label, cc, demo, lab
     
-# Use to check if our .pkl files were created correctly
-def check_pkl(dict_path):
+# Use to load our pkl dictionaries
+def load_pkl(dict_path):
     f = open(dict_path, 'rb') 
     data = pickle.load(f)
     f.close()
@@ -122,12 +118,18 @@ def train():
     config = CONFIGS["IRENE"]
     img_dir = args.DATA_DIR
 
+    # Open validation .pkl file and save the dict to a variable
+    pkl_train_dict = load_pkl(args.TRN_LAB_SET)
+
     # Create Train Dataset and DataLoader object
-    data = Data(args.TRN_LAB_SET, img_dir, transform=data_transforms['test'])
+    data = Data(pkl_train_dict, img_dir, transform=data_transforms['test'])
     loader = DataLoader(data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
+    # Open validation .pkl file and save the dict to a variable
+    pkl_val_dict = load_pkl(args.VAL_LAB_SET)
+
     # Create Validation Dataset and Dataloader object
-    val_data = Data(args.VAL_LAB_SET, img_dir, transform=data_transforms['test'])
+    val_data = Data(pkl_val_dict, img_dir, transform=data_transforms['test'])
     val_loader = DataLoader(val_data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
     # create model object and optimizer

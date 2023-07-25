@@ -50,9 +50,9 @@ def load_dict_from_pkl(file_path):
         return {}
     
 # Save the updated dictionary back to the .pkl file
-def save_dict_to_pkl(data, file_path):
+def save_to_pkl(data, file_path):
     with open(file_path, 'wb') as file:
-        pickle.dump(data, file)
+        pickle.dump(data, file, protocol=pickle.HIGHEST_PROTOCOL)
 
 # Dividing an array into equal parts
 # Use so that we can write to our .pkl file in batches
@@ -118,7 +118,7 @@ def save_dict_iterative(arr, file_path, splits=1):
                 'label': np.array([row[i][row_ind] for i in labels]) # Labels
             }
 
-        save_dict_to_pkl(d, file_path)
+        save_to_pkl(d, file_path)
 '''
 See README.md in the data folder for additional notes on directory structure.
 Running this script will output a .pkl file you can pass as input to the model.
@@ -130,7 +130,10 @@ if __name__ == "__main__":
     d_file = 'train.csv' # point to your textual datafile. Train and test will use the same one.
     d_path = './data/actual/' # folder path
 
-    arr = image_path(d_path+d_set)
+    #arr = image_path(d_path+d_set)
+    #save_to_pkl(arr,d_path+d_set+'_arr.pkl')
+    arr = load_dict_from_pkl(d_path+d_set+'_arr.pkl')
+
     df = data_wrangling(d_path+d_file) 
 
     save_dict_iterative(arr=arr, file_path=d_path+d_set+'.pkl', splits=100)
