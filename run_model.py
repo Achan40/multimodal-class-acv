@@ -113,31 +113,10 @@ def train():
     Function for training IRENE.
     Parameters for this function comes from the passed in args
     '''
-    data_transforms = {
-        'test': transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-        ]),
-    }
 
     num_classes = len(disease_list)
     config = CONFIGS["IRENE"]
     img_dir = args.DATA_DIR
-
-    # Open validation .pkl file and save the dict to a variable
-    pkl_train_dict = load_pkl(args.TRN_LAB_SET)
-
-    # Create Train Dataset and DataLoader object
-    data = Data(pkl_train_dict, img_dir, transform=data_transforms['test'])
-    loader = DataLoader(data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
-
-    # Open validation .pkl file and save the dict to a variable
-    pkl_val_dict = load_pkl(args.VAL_LAB_SET)
-
-    # Create Validation Dataset and Dataloader object
-    val_data = Data(pkl_val_dict, img_dir, transform=data_transforms['test'])
-    val_loader = DataLoader(val_data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
     # create model object and optimizer
     model = IRENE(config, 224, zero_head=True, num_classes=num_classes)
@@ -146,95 +125,145 @@ def train():
         model.cuda()
     optimizer_irene = torch.optim.AdamW(model.parameters(), lr=3e-5, weight_decay=0.01)
 
-    # Using nvidia apex for optimization
-    #model, optimizer_irene = amp.initialize(model.cuda(), optimizer_irene, opt_level="O1")
-
     # define loss function
     loss_fn = torch.nn.BCELoss()
 
-    for epoch in range(args.EPCHS):
-        #---------------------- Begin Training----------------------------
-        model.train()
+    data_transforms = {
+        'test': transforms.Compose([
+            transforms.Resize(256),
+            transforms.CenterCrop(224),
+            transforms.ToTensor(),
+        ]),
+    }
 
-        # Initialize variables used to calculate AUROC
-        outGT = torch.FloatTensor().cuda(non_blocking=True)
-        outPRED = torch.FloatTensor().cuda(non_blocking=True)
-        
-        for item in tqdm(loader):
-            # get the inputs; data is a list of [inputs, labels]
-            preds, labels = item_preds(item=item, model=model)
+    '''
+    args.TRN_LAB_SET can be a list of pkl files.
+    This way, we can train over the entire dataset after splitting it into parts.
+    Would require a very large amount of memory otherwise. Also note 
+    that in windows, the multiprocessor package will throw errors if you load too 
+    much data into memory at once. Limit the size of your .pkl file, otherwise you will
+    have to train on a Linux based machine. 
+    '''
+    for pkl_file in args.TRN_LAB_SET:
+        pkl_train_dict = load_pkl(pkl_file)
 
-            # probability values
-            probs = torch.sigmoid(preds)
+        # Create Train Dataset and DataLoader object 
+        data = Data(pkl_train_dict, img_dir, transform=data_transforms['test'])
+        loader = DataLoader(data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
-            # calculate loss
-            loss = loss_fn(probs, labels)
 
-            outGT = torch.cat((outGT, labels), 0)
-            outPRED = torch.cat((outPRED, probs.data), 0)
+        # Open validation .pkl file and save the dict to a variable
+        pkl_val_dict = load_pkl(args.VAL_LAB_SET)
 
-            optimizer_irene.zero_grad()
-            # with optimizer_irene.scale_loss(loss) as scaled_loss:
-            #     scaled_loss.backward()
+        # Create Validation Dataset and Dataloader object
+        val_data = Data(pkl_val_dict, img_dir, transform=data_transforms['test'])
+        val_loader = DataLoader(val_data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
-            loss.backward()
-            optimizer_irene.step()
+        # Tracking the set number
+        set_num = 0
 
-        # calculate AUROC
-        aurocIndividual = compute_auroc(outGT, outPRED, classCount=num_classes)
-        aurocMean = np.nanmean(np.array(aurocIndividual))
-        
-        print(f"Epoch {epoch+1}/{args.EPCHS}, "
-        f"Training Loss: {loss.item():.4f}, ")
+        # Using nvidia apex for optimization
+        #model, optimizer_irene = amp.initialize(model.cuda(), optimizer_irene, opt_level="O1")
 
-        print('mean AUROC:' + str(aurocMean))
+        print('Training on set '+str(set_num)+': ', pkl_file)
 
-        # -------------- Saving the Model at Every Epoch-----------
-        path = './checkpoints'
-        os.makedirs(path, exist_ok=True)
-        path = './checkpoints/mod'+str(epoch)+'.pt'
-        torch.save(model, path)
-
-        #---------------------- Begin Validation----------------------------
-        model.eval()
-
-        # track validation loss
-        val_loss = 0.0
-
-        with torch.no_grad():
+        for epoch in range(args.EPCHS):
+            #---------------------- Begin Training----------------------------
+            model.train()
 
             # Initialize variables used to calculate AUROC
             outGT = torch.FloatTensor().cuda(non_blocking=True)
             outPRED = torch.FloatTensor().cuda(non_blocking=True)
+
+            # track train loss per epoch
+            trn_loss = 0.0
             
-            for item in tqdm(val_loader):
+            for item in tqdm(loader):
+                # get the inputs; data is a list of [inputs, labels]
                 preds, labels = item_preds(item=item, model=model)
 
                 # probability values
                 probs = torch.sigmoid(preds)
 
-                # calculate loss
-                val_loss += loss_fn(probs, labels).item()
+                # calculate loss for each batch
+                loss = loss_fn(probs, labels)
+
+                # add to total loss
+                trn_loss += loss.item()
 
                 outGT = torch.cat((outGT, labels), 0)
                 outPRED = torch.cat((outPRED, probs.data), 0)
 
-        # calculate average validation loss across all batches
-        val_loss /= len(val_loader)
+                optimizer_irene.zero_grad()
+                # with optimizer_irene.scale_loss(loss) as scaled_loss:
+                #     scaled_loss.backward()
 
-        # calculate AUROC
-        aurocIndividual = compute_auroc(outGT, outPRED, classCount=num_classes)
-        aurocMean = np.nanmean(np.array(aurocIndividual))
+                loss.backward()
+                optimizer_irene.step()
+            
+            # calculate average loss across all batches
+            trn_loss /= len(loader)
+
+            # calculate AUROC
+            aurocIndividual = compute_auroc(outGT, outPRED, classCount=num_classes)
+            aurocMean = np.nanmean(np.array(aurocIndividual))
+            
+            print(f"Epoch {epoch+1}/{args.EPCHS}, "
+            f"Training Loss: {trn_loss:.4f}, ")
+
+            print('mean AUROC:' + str(aurocMean))
+
+            #---------------------- Begin Validation----------------------------
+            model.eval()
+
+            # track validation loss
+            val_loss = 0.0
+
+            with torch.no_grad():
+
+                # Initialize variables used to calculate AUROC
+                outGT = torch.FloatTensor().cuda(non_blocking=True)
+                outPRED = torch.FloatTensor().cuda(non_blocking=True)
+                
+                for item in tqdm(val_loader):
+                    preds, labels = item_preds(item=item, model=model)
+
+                    # probability values
+                    probs = torch.sigmoid(preds)
+
+                    # calculate loss
+                    val_loss += loss_fn(probs, labels).item()
+
+                    outGT = torch.cat((outGT, labels), 0)
+                    outPRED = torch.cat((outPRED, probs.data), 0)
+
+            # calculate average validation loss across all batches
+            val_loss /= len(val_loader)
+
+            # calculate AUROC
+            aurocIndividual = compute_auroc(outGT, outPRED, classCount=num_classes)
+            aurocMean = np.nanmean(np.array(aurocIndividual))
+            
+            # show auroc for each class
+            #for i in range (0, len(aurocIndividual)):
+                #print(disease_list[i] + ': '+str(aurocIndividual[i]))
+
+            print(f"Epoch {epoch+1}/{args.EPCHS}, "
+            f"Validation Loss: {val_loss:.4f}, ")
+
+            print('Mean AUROC:' + str(aurocMean))
+            torch.cuda.empty_cache()
         
-        # show auroc for each class
-        #for i in range (0, len(aurocIndividual)):
-            #print(disease_list[i] + ': '+str(aurocIndividual[i]))
+        # -------------- Saving the Model after training on each set-----------
+        path = './checkpoints'
+        os.makedirs(path, exist_ok=True)
+        path = './checkpoints/set_'+str(set_num)+'mod.pt'
+        torch.save(model, path)
 
-        print(f"Epoch {epoch+1}/{args.EPCHS}, "
-        f"Validation Loss: {val_loss:.4f}, ")
+        set_num += 1
 
-        print('Mean AUROC:' + str(aurocMean))
-        torch.cuda.empty_cache()
+        # Clean objects from mem when finished training on a set
+        del data, loader, val_data, val_loader
 
 def test():
     '''
@@ -304,7 +333,7 @@ if __name__ == '__main__':
 
     # conditional arguements based on whether we want to train the model or make predictions on a test set
     parser_train = subparsers.add_parser('train')
-    parser_train.add_argument('--TRN_LAB_SET', action='store', dest='TRN_LAB_SET', required=True, type=str) # path to train.pkl file
+    parser_train.add_argument('--TRN_LAB_SET', nargs='+', action='store', dest='TRN_LAB_SET',help='List of pkl files to use for training', required=True, type=str) # path to train.pkl file. Can pass in multiple. This will allow us to train the large dataset without consuming too much system memory
     parser_train.add_argument('--VAL_LAB_SET', action='store', dest='VAL_LAB_SET', required=True, type=str) # path to valid.pkl file
     parser_train.add_argument('--EPCHS', action='store', dest='EPCHS', required=True, type=int) # number of epochs
 
@@ -315,6 +344,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if args.subcommand == 'train':
+        #./data/actual/train.pkl ./data/actual/train2.pkl ./data/actual/train3.pkl ./data/actual/train4.pkl ./data/actual/train5.pkl ./data/actual/train6.pkl ./data/actual/train7.pkl ./data/actual/train8.pkl'
         train()
     elif args.subcommand == 'test':
         test()

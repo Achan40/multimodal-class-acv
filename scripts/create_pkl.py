@@ -103,10 +103,15 @@ def save_dict_iterative(arr, file_path, splits=1):
     # arr will now look something like [[path,path,path],[path,path,path],...]
     m_arr = divide_array_equal_parts(arr, splits)
 
+    split_num = 0
+
     # for each iterable in m_arr
     for slice in tqdm(m_arr):
+
+        # create empty dict to store data
+        d = {}
         # load a dictionary saved as a pkl file or create an empty one
-        d = load_dict_from_pkl(file_path) 
+        # d = load_dict_from_pkl(file_path) 
 
         # for each item in the iterable
         for path in tqdm(slice):
@@ -141,12 +146,14 @@ def save_dict_iterative(arr, file_path, splits=1):
                 'bts': np.array([row['Frontal/Lateral'][row_ind]]), # Structured Data
                 'label': np.array([row[i][row_ind] for i in labels]) # Labels
             }
-
-        save_to_pkl(d, file_path)
+        
+        # For each split, create a new .pkl file
+        save_to_pkl(d, file_path+"_"+str(split_num)+".pkl")
+        split_num += 1
 
 '''
 See README.md in the data folder for additional notes on directory structure.
-Running this script will output a .pkl file you can pass as input to the model.
+Running this script will output.pkl file you can pass as input to the model.
 Run multiple times to generate for your train, validation and test sets.
 '''
 if __name__ == "__main__":
@@ -161,7 +168,7 @@ if __name__ == "__main__":
 
     df = data_wrangling(d_path+d_file)
 
-    save_dict_iterative(arr=arr, file_path=d_path+d_set+'.pkl', splits=100)
+    save_dict_iterative(arr=arr, file_path=d_path+d_set, splits=20)
     
     #dct = create_dct(df=df, arr=arr)
     #create_pkl(dct=dct, filename=d_path+d_set+'.pkl')
