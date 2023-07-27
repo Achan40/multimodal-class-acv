@@ -168,7 +168,7 @@ if __name__ == "__main__":
 
     df = data_wrangling(d_path+d_file)
 
-    save_dict_iterative(arr=arr, file_path=d_path+d_set, splits=20)
+    save_dict_iterative(arr=arr, file_path=d_path+d_set, splits=500)
     
     #dct = create_dct(df=df, arr=arr)
     #create_pkl(dct=dct, filename=d_path+d_set+'.pkl')

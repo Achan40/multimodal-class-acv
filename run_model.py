@@ -136,6 +136,9 @@ def train():
         ]),
     }
 
+    # Tracking the set number
+    set_num = 0
+
     '''
     args.TRN_LAB_SET can be a list of pkl files.
     This way, we can train over the entire dataset after splitting it into parts.
@@ -159,8 +162,7 @@ def train():
         val_data = Data(pkl_val_dict, img_dir, transform=data_transforms['test'])
         val_loader = DataLoader(val_data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
-        # Tracking the set number
-        set_num = 0
+        
 
         # Using nvidia apex for optimization
         #model, optimizer_irene = amp.initialize(model.cuda(), optimizer_irene, opt_level="O1")
@@ -259,8 +261,6 @@ def train():
         os.makedirs(path, exist_ok=True)
         path = './checkpoints/set_'+str(set_num)+'mod.pt'
         torch.save(model, path)
-
-        set_num += 1
 
         # Clean objects from mem when finished training on a set
         del data, loader, val_data, val_loader
