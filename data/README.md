@@ -1,4 +1,4 @@
-# Data
+# Data Selection
 
 The training dataset used is the [CheXpert](https://stanfordmlgroup.github.io/competitions/chexpert) dataset. The validation and test datasets can be found [here](https://stanfordaimi.azurewebsites.net/datasets/23c56a0d-15de-405b-87c8-99c30138950c) contained within the CheXpert directory.
 
@@ -24,3 +24,10 @@ Remember to set the `percentage_to_sample` and `action=move` if you're ready to 
 While located in this repositories root directory in your python shell, edit and run the `create_pkl.py` script to create the required `.pkl` files for each of your sets. 
 
 The model takes in a dictionary as input. 
+
+# Additional Details
+
+Training Set: 98% of the data from the train set of the CheXpert data. Approximately 219k records split into 20 subsets of randomly selected date (without replacement).
+Validation Set: The validation data provided in the CheXpert data. 234 records.
+Testing Set: Random selection of 2% of the data from the train set of the CheXpert data. Approximately 4k records.
+

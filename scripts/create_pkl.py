@@ -1,6 +1,7 @@
 import pickle
 import numpy as np
 import pandas as pd
+import random
 
 from pathlib import Path
 from tqdm import tqdm
@@ -57,6 +58,10 @@ def load_dict_from_pkl(file_path):
     try:
         with open(file_path, 'rb') as file:
             data = pickle.load(file)
+
+            # randomly shuffle the data
+            random.shuffle(data)
+
         return data
     except FileNotFoundError:
         return {}
@@ -93,10 +98,10 @@ def divide_array_equal_parts(arr, num_parts):
     return divided_array
 
 
-def save_dict_iterative(arr, file_path, splits=1):
+def save_dict_iterative(arr, df, file_path, splits=1):
     '''
     Writing and saving data iteratively to .pkl file
-    Takes in an array of paths, the file path we want to write to, and the 
+    Takes in an array of paths,  the file path we want to write to, and the 
     number of write iterations
     '''
 
@@ -151,6 +156,13 @@ def save_dict_iterative(arr, file_path, splits=1):
         save_to_pkl(d, file_path+"_"+str(split_num)+".pkl")
         split_num += 1
 
+
+def shuffle_arr(arr):
+    '''
+    Randomly shuffles values in an array
+    '''
+
+
 '''
 See README.md in the data folder for additional notes on directory structure.
 Running this script will output.pkl file you can pass as input to the model.
@@ -166,9 +178,8 @@ if __name__ == "__main__":
     #save_to_pkl(arr,d_path+d_set+'_arr.pkl')
     arr = load_dict_from_pkl(d_path+d_set+'_arr.pkl')
 
+    # perform data wrangling on the structured dataset
     df = data_wrangling(d_path+d_file)
 
-    save_dict_iterative(arr=arr, file_path=d_path+d_set, splits=500)
-    
-    #dct = create_dct(df=df, arr=arr)
-    #create_pkl(dct=dct, filename=d_path+d_set+'.pkl')
+    # split up the dataset into n parts
+    save_dict_iterative(arr=arr, df=df, file_path=d_path+d_set, splits=20)

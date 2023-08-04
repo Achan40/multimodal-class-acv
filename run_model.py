@@ -118,11 +118,29 @@ def train():
     config = CONFIGS["IRENE"]
     img_dir = args.DATA_DIR
 
-    # create model object and optimizer
-    model = IRENE(config, 224, zero_head=True, num_classes=num_classes)
+    # Creating an IRENE model, or using a saved checkpoint if one is indicated.
+    if args.SAVED_MOD is None:
+        print("No saved model indicated. Training new model.")
+        # create model object and optimizer
+        model = IRENE(config, 224, zero_head=True, num_classes=num_classes)
+        set_num = 0
+    else:
+        print("Continue training model: " + args.SAVED_MOD)
+        model = torch.load(args.SAVED_MOD)
+
+        # Hit conditional if SAVED_MOD is specified and SAVED_MOD_OFFSET is specified
+        if args.SAVED_MOD_OFFSET is None:
+            print("No offset indicated. May overwrite checkpoints when saving. Beginning at offset 0")
+            set_num = 0
+        # Tracking the set number
+        else:
+            print("Offset specified. Will begin saving model at offset: " + str(args.SAVED_MOD_OFFSET))
+            set_num = args.SAVED_MOD_OFFSET
 
     if torch.cuda.is_available():
         model.cuda()
+    
+    # build the optimizer
     optimizer_irene = torch.optim.AdamW(model.parameters(), lr=3e-5, weight_decay=0.01)
 
     # define loss function
@@ -136,15 +154,13 @@ def train():
         ]),
     }
 
-    # Tracking the set number
-    set_num = 0
 
     '''
     args.TRN_LAB_SET can be a list of pkl files.
     This way, we can train over the entire dataset after splitting it into parts.
     Would require a very large amount of memory otherwise. Also note 
     that in windows, the multiprocessor package will throw errors if you load too 
-    much data into memory at once. Limit the size of your .pkl file, otherwise you will
+    much data into memory at once. Limit the size of your .pkl files, otherwise you will
     have to train on a Linux based machine. 
     '''
     for pkl_file in args.TRN_LAB_SET:
@@ -336,6 +352,8 @@ if __name__ == '__main__':
     parser_train.add_argument('--TRN_LAB_SET', nargs='+', action='store', dest='TRN_LAB_SET',help='List of pkl files to use for training', required=True, type=str) # path to train.pkl file. Can pass in multiple. This will allow us to train the large dataset without consuming too much system memory
     parser_train.add_argument('--VAL_LAB_SET', action='store', dest='VAL_LAB_SET', required=True, type=str) # path to valid.pkl file
     parser_train.add_argument('--EPCHS', action='store', dest='EPCHS', required=True, type=int) # number of epochs
+    parser_train.add_argument('--SAVED_MOD', action='store', dest='SAVED_MOD', required=False, type=str) # use if you have an existing model and want to continue training
+    parser_train.add_argument('--SAVED_MOD_OFFSET', action='store', dest='SAVED_MOD_OFFSET', required=False, type=int) # Specify the offset so you don't overwrite a checkpoint
 
     parser_test = subparsers.add_parser('test')
     parser_test.add_argument('--TST_LAB_SET', action='store', dest='TST_LAB_SET', required=True, type=str) # path to test.pkl file
