@@ -170,16 +170,16 @@ Run multiple times to generate for your train, validation and test sets.
 '''
 if __name__ == "__main__":
 
-    d_set = 'train' # the set you want to create a .pkl file for
+    d_set = 'test' # the set you want to create a .pkl file for
     d_file = 'train.csv' # point to your textual datafile. Train and test will use the same one.
     d_path = './data/actual/' # folder path
 
-    #arr = image_path(d_path+d_set)
+    arr = image_path(d_path+d_set)
     #save_to_pkl(arr,d_path+d_set+'_arr.pkl')
-    arr = load_dict_from_pkl(d_path+d_set+'_arr.pkl')
+    #arr = load_dict_from_pkl(d_path+d_set+'_arr.pkl')
 
     # perform data wrangling on the structured dataset
     df = data_wrangling(d_path+d_file)
 
     # split up the dataset into n parts
-    save_dict_iterative(arr=arr, df=df, file_path=d_path+d_set, splits=20)
+    save_dict_iterative(arr=arr, df=df, file_path=d_path+d_set, splits=1)

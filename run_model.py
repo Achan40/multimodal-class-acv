@@ -4,6 +4,8 @@ import argparse
 from multiprocessing import Manager
 import numpy as np
 import torch
+import pandas as pd
+import csv
 
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
@@ -87,7 +89,8 @@ def compute_auroc(data_gt, data_pred, classCount=14):
             out_auroc.append(np.nan)
         else:
             out_auroc.append(roc_auc_score(data_np_gt[:, i], data_np_pred[:, i]))
-        return out_auroc
+    
+    return out_auroc
 
 def item_preds(item, model):
     '''
@@ -108,6 +111,29 @@ def item_preds(item, model):
 
     return preds, labels
 
+def tracking_results_file(filename='./checkpoints/metrics.csv', headers=["dataset", "set_num","epoch", "trn_loss", "trn_mean_auroc", "val_loss", "val_mean_auroc"]):
+    '''
+    Create a file for tracking various metrics while training
+    '''
+    # Check if the file exists
+    if not os.path.exists(filename):
+        # If the file doesn't exist, create it and write the headers
+        with open(filename, mode="w", newline="") as file:
+            writer = csv.writer(file)
+            writer.writerow(headers)
+    else:
+        # If the file already exists, do nothing
+        print("metrics.csv already exists. Will continue writing to file.")
+
+def write_to_tracking_results(arr, filename='./checkpoints/metrics.csv'):
+    '''
+    Write to an existing tracking file. The tracking file should already be
+    created before this function is called
+    '''
+    with open(filename, mode="a", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(arr)
+
 def train():
     '''
     Function for training IRENE.
@@ -120,7 +146,7 @@ def train():
 
     # Creating an IRENE model, or using a saved checkpoint if one is indicated.
     if args.SAVED_MOD is None:
-        print("No saved model indicated. Training new model.")
+        print("No saved model specified. Training new model.")
         # create model object and optimizer
         model = IRENE(config, 224, zero_head=True, num_classes=num_classes)
         set_num = 0
@@ -154,6 +180,9 @@ def train():
         ]),
     }
 
+    # --------------- Create or use existing csv for tracking training metrics-------------------
+    # headers default to: ["dataset", "set_num","epoch", "trn_loss", "val_loss", "trn_mean_auroc", "val_mean_auroc"]
+    tracking_results_file()
 
     '''
     args.TRN_LAB_SET can be a list of pkl files.
@@ -178,11 +207,6 @@ def train():
         val_data = Data(pkl_val_dict, img_dir, transform=data_transforms['test'])
         val_loader = DataLoader(val_data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
-        
-
-        # Using nvidia apex for optimization
-        #model, optimizer_irene = amp.initialize(model.cuda(), optimizer_irene, opt_level="O1")
-
         print('Training on set '+str(set_num)+': ', pkl_file)
 
         for epoch in range(args.EPCHS):
@@ -195,7 +219,10 @@ def train():
 
             # track train loss per epoch
             trn_loss = 0.0
-            
+
+            # track metrics
+            metrics_arr = []
+
             for item in tqdm(loader):
                 # get the inputs; data is a list of [inputs, labels]
                 preds, labels = item_preds(item=item, model=model)
@@ -230,6 +257,10 @@ def train():
             f"Training Loss: {trn_loss:.4f}, ")
 
             print('mean AUROC:' + str(aurocMean))
+
+            # add values to array for metrics tracking. 
+            # name of dataset, epoch number, training loss, training mean auroc
+            metrics_arr.extend([pkl_file, set_num, epoch+1, trn_loss, aurocMean])
 
             #---------------------- Begin Validation----------------------------
             model.eval()
@@ -270,13 +301,23 @@ def train():
             f"Validation Loss: {val_loss:.4f}, ")
 
             print('Mean AUROC:' + str(aurocMean))
+
+            # add values to array for metrics tracking. 
+            # validation loss and validation mean auroc
+            metrics_arr.extend([val_loss, aurocMean])
+
+            # write a new line to the tracking file every epoch
+            write_to_tracking_results(metrics_arr)
+
             torch.cuda.empty_cache()
-        
+
         # -------------- Saving the Model after training on each set-----------
         path = './checkpoints'
         os.makedirs(path, exist_ok=True)
         path = './checkpoints/set_'+str(set_num)+'mod.pt'
         torch.save(model, path)
+
+        set_num += 1
 
         # Clean objects from mem when finished training on a set
         del data, loader, val_data, val_loader
@@ -297,8 +338,10 @@ def test():
     num_classes = len(disease_list)
     img_dir = args.DATA_DIR
 
+    pkl_test_dict = load_pkl(args.TST_LAB_SET)
+
     # Create Train Dataset and DataLoader object
-    test_data = Data(args.TST_LAB_SET, img_dir, transform=data_transforms['test'])
+    test_data = Data(pkl_test_dict, img_dir, transform=data_transforms['test'])
     test_loader = DataLoader(test_data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
     # load a saved model
@@ -328,10 +371,13 @@ def test():
             outGT = torch.cat((outGT, labels), 0)
             outPRED = torch.cat((outPRED, probs.data), 0)
 
+    print(outGT)
+    print(outPRED)
+    
     # calculate AUROC
     aurocIndividual = compute_auroc(outGT, outPRED, classCount=num_classes)
     aurocMean = np.nanmean(np.array(aurocIndividual))
-    
+
     # show auroc for each class
     for i in range (0, len(aurocIndividual)):
         print(disease_list[i] + ': '+str(aurocIndividual[i]))
