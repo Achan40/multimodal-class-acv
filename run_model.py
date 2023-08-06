@@ -75,7 +75,7 @@ def load_pkl(dict_path):
 
 def compute_auroc(data_gt, data_pred, classCount=14):
     '''
-    Comput auroc values using true values and
+    Compute auroc values using true values and
     probabilites for each class predicition
     '''
     out_auroc = []
