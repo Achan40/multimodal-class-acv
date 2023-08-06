@@ -311,11 +311,11 @@ def train():
 
             torch.cuda.empty_cache()
 
-        # -------------- Saving the Model after training on each set-----------
-        path = './checkpoints'
-        os.makedirs(path, exist_ok=True)
-        path = './checkpoints/set_'+str(set_num)+'mod.pt'
-        torch.save(model, path)
+            # -------------- Saving the Model after training on each epoch-----------
+            path = './checkpoints'
+            os.makedirs(path, exist_ok=True)
+            path = './checkpoints/set_'+str(set_num)+'_epc_'+str(epoch+1)+'.pt'
+            torch.save(model, path)
 
         set_num += 1
 
@@ -370,9 +370,6 @@ def test():
 
             outGT = torch.cat((outGT, labels), 0)
             outPRED = torch.cat((outPRED, probs.data), 0)
-
-    print(outGT)
-    print(outPRED)
     
     # calculate AUROC
     aurocIndividual = compute_auroc(outGT, outPRED, classCount=num_classes)

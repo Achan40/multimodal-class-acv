@@ -4,6 +4,17 @@ Multimodal classification using [IRENE](https://www.nature.com/articles/s41551-0
 ### Environment Setup
 `Python 3.10`, `Pytorch`, `Cuda 11.8`, `sklearn`, `PIL`, `matplotlib`, `skimage`, `ml-collections`
 
+### Training loop
+Assuming all necessary packages have been installed into your python environment.
+1. See the README within the `data` directory for data setup instructions
+2. Modify and run the shell command. Examples  
+
+Training was conducted locally on a single machine with the following specifications. You may have to adjust certain parameters within `run_model.py` to work with your machine:
+OS: Windows 11
+CPU: Ryzen 9 7900X
+RAM: 64GB
+GPU: RTX 3080 12gb
+
 ## Code Citation
 Code is adapted from [RL4M/IRENE](https://github.com/RL4M/IRENE).
 

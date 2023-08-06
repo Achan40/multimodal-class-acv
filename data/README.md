@@ -1,10 +1,8 @@
 # Data Selection
 
-The training dataset used is the [CheXpert](https://stanfordmlgroup.github.io/competitions/chexpert) dataset. The validation and test datasets can be found [here](https://stanfordaimi.azurewebsites.net/datasets/23c56a0d-15de-405b-87c8-99c30138950c) contained within the CheXpert directory.
+The training dataset used is the [CheXpert](https://stanfordmlgroup.github.io/competitions/chexpert) dataset. The validation and datasets can be found [here](https://stanfordaimi.azurewebsites.net/datasets/23c56a0d-15de-405b-87c8-99c30138950c) contained within the CheXpert directory.
 
-Note: The easiest way to download the validation and test dataset is by using [AzCopy](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-v10). Additional documentation [here](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-blobs-download).
-
-2023-07-19: The test dataset does not contain the same structured labels (ie: `Age`, `Sex`, etc..) as the train and validation set. May need to do some random sampling from the train set to retrieve the test set...
+Note: The easiest way to download the validation and test dataset is by using [AzCopy](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-v10). Additional documentation [here](https://learn.microsoft.com/en-us/azure/storage/common/storage-use-azcopy-blobs-download). Note: the test dataset does not contain the same structured labels (ie: `Age`, `Sex`, etc..) as the train and validation set. We perform random sampling from the train set to retrieve the test set for this project.
 
 ### 1. Directory and File Structure
 After downloading the CheXpert dataset, place the train/valid/test directories and their corresponding .csv files into the data directory. Rename .csv files accordingly. 
@@ -30,4 +28,3 @@ The model takes in a dictionary as input.
 Training Set: 98% of the data from the train set of the CheXpert data. Approximately 219k records split into 20 subsets of randomly selected date (without replacement).
 Validation Set: The validation data provided in the CheXpert data. 234 records.
 Testing Set: Random selection of 2% of the data from the train set of the CheXpert data. Approximately 4k records.
-
