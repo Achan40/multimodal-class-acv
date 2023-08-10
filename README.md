@@ -4,10 +4,12 @@ Multimodal classification using [IRENE](https://www.nature.com/articles/s41551-0
 ### Environment Setup
 `Python 3.10`, `Pytorch`, `Cuda 11.8`, `sklearn`, `PIL`, `matplotlib`, `skimage`, `ml-collections`
 
+A few other libraries may be required in addition to the ones above. 
+
 ### Training loop
 Assuming all necessary packages have been installed into your python environment.
 1. See the README within the `data` directory for data setup instructions
-2. Modify and run the shell command. Examples  
+3. Modify and run the shell commands. Examples can be found in the `run.sh` file
 
 Training was conducted locally on a single machine with the following specifications. You may have to adjust certain parameters within `run_model.py` to work with your machine:
 OS: Windows 11
