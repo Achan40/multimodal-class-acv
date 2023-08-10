@@ -2,14 +2,15 @@
 Multimodal classification using [IRENE](https://www.nature.com/articles/s41551-023-01045-x). Since the dataset used in the original paper was not publicly available, we decided to use the [CheXpert](https://stanfordmlgroup.github.io/competitions/chexpert) dataset instead.
 
 ### Environment Setup
-`Python 3.10`, `Pytorch`, `Cuda 11.8`, `sklearn`, `PIL`, `matplotlib`, `skimage`, `ml-collections`
-
-A few other libraries may be required in addition to the ones above. 
+Python version: 3.10
+`Pytorch`, `Cuda 11.8`, `sklearn`, `PIL`, `matplotlib`, `skimage`, `ml-collections`, `tqdm`, `pickle`, `pandas`, `numpy`
 
 ### Training loop
 Assuming all necessary packages have been installed into your python environment.
 1. See the README within the `data` directory for data setup instructions
-3. Modify and run the shell commands. Examples can be found in the `run.sh` file
+2. Modify and run the shell commands. Examples can be found in the `run.sh` file
+
+See the `metrics_and_performance.ipynb` file for specifics on how we trained our model.
 
 Training was conducted locally on a single machine with the following specifications. You may have to adjust certain parameters within `run_model.py` to work with your machine:
 OS: Windows 11
