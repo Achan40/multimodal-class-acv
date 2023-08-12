@@ -1,130 +1,14 @@
 import os
-import pickle
 import argparse
-from multiprocessing import Manager
 import numpy as np
 import torch
-import pandas as pd
-import csv
 
-from torch.utils.data import Dataset, DataLoader
-from PIL import Image
+from torch.utils.data import  DataLoader
 from torchvision import transforms
 from tqdm import tqdm
-from sklearn.metrics import roc_auc_score
 from models.modeling_cnn import MultiClassCNN
 
-# token limit for unstructured textual data
-TK_LIM = 40
-
-disease_list = ['Enlarged Cardiomediastinum', 'Cardiomegaly', 'Lung Opacity',
-       'Lung Lesion', 'Edema', 'Consolidation', 'Pneumonia', 'Atelectasis',
-       'Pneumothorax', 'Pleural Effusion', 'Pleural Other', 'Fracture',
-       'Support Devices', 'No Finding']
-
-class Data(Dataset):
-    '''
-    Takes in a sturctured data formatted as a python dictionary,
-    path to a directory of images, and any tranformations that need to be performed
-    '''
-    def __init__(self, d_set, img_dir, transform=None, target_transform=None):
-        ''' Wrap dicts in Manager object. This deals with the copy-on-access problem of 
-        forked python processes since we use a standard python dict for our data object. 
-        If we don't do this, the num_workers parameter 
-        in our dataloader object will duplicate memory for each worker. 
-        Note: There is an issue in windows with multiprocessing where the 
-        Manager() cannot handle large dictionaries. 
-        Had to run in linux to run train without issue
-        '''
-        manager = Manager()
-        self.mm_data = manager.dict(d_set)
-        self.idx_list = manager.list(self.mm_data.keys())
-        self.img_dir = img_dir
-        self.transform = transform
-        self.target_transform = target_transform
-
-    def __len__(self):
-        return len(self.idx_list)
-
-    def __getitem__(self, idx):
-        k = self.idx_list[idx]
-        img_path = os.path.join(self.img_dir, k)
-        img = Image.open(img_path).convert('RGB')
-
-        label = self.mm_data[k]['label'].astype('float32')
-        if self.transform:
-            img = self.transform(img)
-
-        if self.target_transform:
-            label = self.target_transform(label)
-
-        return img, label
-
-def load_pkl(dict_path):
-    '''
-    Takes in a path to a .pkl file
-    and saves the data as a variable
-    '''
-    f = open(dict_path, 'rb')
-    data = pickle.load(f)
-    f.close()
-    return data
-
-def compute_auroc(data_gt, data_pred, classCount=14):
-    '''
-    Compute auroc values using true values and
-    probabilites for each class predicition
-    '''
-    out_auroc = []
-    data_np_gt = data_gt.cpu().numpy()
-    data_np_pred = data_pred.cpu().numpy()
-
-    for i in range(classCount):
-        # If is only one unique value in a column of our true labels, append NA.
-        # Cannot compute roc_auc otherwise
-        if len(np.unique(data_np_gt[:,i])) <= 1:
-            out_auroc.append(np.nan)
-        else:
-            out_auroc.append(roc_auc_score(data_np_gt[:, i], data_np_pred[:, i]))
-    
-    return out_auroc
-
-def item_preds(item, model):
-    '''
-    Takes in a list(batch) of items and the model.
-    Then generate predictions and return the predictions and true labels for each
-    '''
-    imgs, labels = item
-
-    imgs = imgs.cuda(non_blocking=True)
-    labels = labels.cuda(non_blocking=True)
-
-    preds = model(imgs)
-
-    return preds, labels
-
-def tracking_results_file(filename='./checkpoints/metrics.csv', headers=["dataset", "set_num","epoch", "trn_loss", "trn_mean_auroc", "val_loss", "val_mean_auroc"]):
-    '''
-    Create a file for tracking various metrics while training
-    '''
-    # Check if the file exists
-    if not os.path.exists(filename):
-        # If the file doesn't exist, create it and write the headers
-        with open(filename, mode="w", newline="") as file:
-            writer = csv.writer(file)
-            writer.writerow(headers)
-    else:
-        # If the file already exists, do nothing
-        print("metrics.csv already exists. Will continue writing to file.")
-
-def write_to_tracking_results(arr, filename='./checkpoints/metrics.csv'):
-    '''
-    Write to an existing tracking file. The tracking file should already be
-    created before this function is called
-    '''
-    with open(filename, mode="a", newline="") as file:
-        writer = csv.writer(file)
-        writer.writerow(arr)
+from helper import DataImageOnly, load_pkl, compute_auroc, item_preds_img_only, tracking_results_file, write_to_tracking_results, disease_list
 
 def train():
     '''
@@ -187,7 +71,7 @@ def train():
         pkl_train_dict = load_pkl(pkl_file)
 
         # Create Train Dataset and DataLoader object 
-        data = Data(pkl_train_dict, img_dir, transform=data_transforms['test'])
+        data = DataImageOnly(pkl_train_dict, img_dir, transform=data_transforms['test'])
         loader = DataLoader(data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
 
@@ -195,7 +79,7 @@ def train():
         pkl_val_dict = load_pkl(args.VAL_LAB_SET)
 
         # Create Validation Dataset and Dataloader object
-        val_data = Data(pkl_val_dict, img_dir, transform=data_transforms['test'])
+        val_data = DataImageOnly(pkl_val_dict, img_dir, transform=data_transforms['test'])
         val_loader = DataLoader(val_data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
         print('Training on set '+str(set_num)+': ', pkl_file)
@@ -216,7 +100,7 @@ def train():
 
             for item in tqdm(loader):
                 # get the inputs; data is a list of [inputs, labels]
-                preds, labels = item_preds(item=item, model=model)
+                preds, labels = item_preds_img_only(item=item, model=model)
 
                 # probability values
                 probs = torch.sigmoid(preds)
@@ -266,7 +150,7 @@ def train():
                 outPRED = torch.FloatTensor().cuda(non_blocking=True)
                 
                 for item in tqdm(val_loader):
-                    preds, labels = item_preds(item=item, model=model)
+                    preds, labels = item_preds_img_only(item=item, model=model)
 
                     # probability values
                     probs = torch.sigmoid(preds)
@@ -332,7 +216,7 @@ def test():
     pkl_test_dict = load_pkl(args.TST_LAB_SET)
 
     # Create Train Dataset and DataLoader object
-    test_data = Data(pkl_test_dict, img_dir, transform=data_transforms['test'])
+    test_data = DataImageOnly(pkl_test_dict, img_dir, transform=data_transforms['test'])
     test_loader = DataLoader(test_data, batch_size=args.BSZ, shuffle=False, num_workers=12, pin_memory=True)
 
     # load a saved model
@@ -354,7 +238,7 @@ def test():
         outPRED = torch.FloatTensor().cuda(non_blocking=True)
         
         for item in tqdm(test_loader):
-            preds, labels = item_preds(item=item, model=model)
+            preds, labels = item_preds_img_only(item=item, model=model)
 
             # probability values
             probs = torch.sigmoid(preds)
