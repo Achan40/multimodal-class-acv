@@ -42,7 +42,7 @@ def train():
         model.cuda()
     
     # build the optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr=.003)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=3e-5)
 
     # define loss function
     loss_fn = torch.nn.BCELoss()
