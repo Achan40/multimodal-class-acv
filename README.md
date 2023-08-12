@@ -19,6 +19,8 @@ Training was conducted locally on a single machine with the following specificat
 * RAM: 64GB
 * GPU: RTX 3080 12gb
 
+Note: `run_model_cnn.py` is functionally the same as `run_model.py`, except this is used to train/test a custom CNN approach instead of IRENE. Notable differences include: changes to `Data` class in the `__getitem__` method, removal of some arguments in the optimizer within the `train()` function, adjustments to the `item_preds` function.
+
 ## Code Citation
 Code is adapted from [RL4M/IRENE](https://github.com/RL4M/IRENE).
 
