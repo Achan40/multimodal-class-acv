@@ -21,7 +21,7 @@ Remember to set the `percentage_to_sample` and `action=move` if you're ready to 
 ### 3. Generate .pkl Files
 While located in this repositories root directory in your python shell, edit and run the `create_pkl.py` script to create the required `.pkl` files for each of your sets. 
 
-The model takes in a dictionary as input. 
+The CNN and IRENE models can use the same input files.
 
 # Additional Details
 

@@ -3,6 +3,7 @@ Multimodal classification using [IRENE](https://www.nature.com/articles/s41551-0
 
 ### Environment Setup
 Python version: 3.10
+
 `Pytorch`, `Cuda 11.8`, `sklearn`, `PIL`, `matplotlib`, `skimage`, `ml-collections`, `tqdm`, `pickle`, `pandas`, `numpy`
 
 ### Training loop
