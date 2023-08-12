@@ -3,7 +3,7 @@ import torch.nn as nn
 
 # Define hyperparameters for the CNN model
 hidden_units = 128
-dropout_rate = 0.5
+dropout_rate = 0.3
 
 # Define the CNN architecture
 class MultiClassCNN(nn.Module):
