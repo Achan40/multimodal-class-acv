@@ -12,3 +12,6 @@ python run_model.py --BSZ 24 --DATA_DIR ./data/actual/ train --EPCHS 10 --SAVED_
 
 # run testing 
 python run_model.py --BSZ 24 --DATA_DIR ./data/actual/ test --TST_LAB_SET ./data/actual/test_0.pkl --SAVED_MOD ./checkpoints/set_16_epc_1.pt
+
+# CNN
+python run_model_CNN.py --BSZ 3 --DATA_DIR ./data/predev/ train --EPCHS 5 --TRN_LAB_SET ./data/predev/train.pkl --VAL_LAB_SET ./data/predev/valid.pkl
