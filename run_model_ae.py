@@ -11,7 +11,7 @@ from models.modeling_ae import Autoencoder
 from helper import DataImageOnly, load_pkl, compute_auroc, item_preds_img_only, tracking_results_file, write_to_tracking_results, disease_list
 
 # Hyperparameters
-input_dim = 150528 # shape of flattened image
+input_dim = 244 # shape of flattened image
 encoding_dim = 32
 
 def train():
@@ -94,9 +94,8 @@ def train():
 
             for item in tqdm(loader):
                 inputs, _ = item
-                inputs = inputs.view(inputs.size(0), -1)  # Flatten the input images
-
-                inputs = torch.FloatTensor(inputs).cuda(non_blocking=True) # convert to tensor on gpu
+                # send input to gpu if available
+                inputs = inputs.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
                 # outputs
                 outputs = model(inputs)
 
@@ -133,9 +132,8 @@ def train():
                 
                 for item in tqdm(val_loader):
                     inputs, _ = item
-                    inputs = inputs.view(inputs.size(0), -1)  # Flatten the input images
-
-                    inputs = torch.FloatTensor(inputs).cuda(non_blocking=True) # convert to tensor on gpu
+                    # send input to gpu if available
+                    inputs = inputs.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
                     # outputs
                     outputs = model(inputs)
@@ -183,7 +181,6 @@ def test():
         ]),
     }
 
-    num_classes = len(disease_list)
     img_dir = args.DATA_DIR
 
     pkl_test_dict = load_pkl(args.TST_LAB_SET)
@@ -215,9 +212,7 @@ def test():
         
         for item in tqdm(test_loader):
             inputs, _ = item
-            inputs = inputs.view(inputs.size(0), -1)  # Flatten the input images
-
-            inputs = torch.FloatTensor(inputs).cuda(non_blocking=True) # convert to tensor on gpu
+            inputs = inputs.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
             # outputs
             outputs = model(inputs)

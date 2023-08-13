@@ -5,18 +5,24 @@ import torch.nn as nn
 class Autoencoder(nn.Module):
     def __init__(self, input_dim, encoding_dim):
         super(Autoencoder, self).__init__()
+        # Encoder
         self.encoder = nn.Sequential(
-            nn.Linear(input_dim, 128),
-            nn.ReLU(True),
-            nn.Linear(128, encoding_dim)
+            nn.Conv2d(3, 32, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(32, 64, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=2, stride=2)
         )
+        
+        # Decoder
         self.decoder = nn.Sequential(
-            nn.Linear(encoding_dim, 128),
-            nn.ReLU(True),
-            nn.Linear(128, input_dim),
-            nn.Sigmoid()  # Output values between 0 and 1
+            nn.ConvTranspose2d(64, 32, kernel_size=2, stride=2),
+            nn.ReLU(),
+            nn.ConvTranspose2d(32, 3, kernel_size=2, stride=2),
+            nn.Sigmoid()
         )
-
+    
     def forward(self, x):
         encoded = self.encoder(x)
         decoded = self.decoder(encoded)
