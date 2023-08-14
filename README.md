@@ -22,6 +22,19 @@ Training was conducted locally on a single machine with the following specificat
 
 Note: `run_model_cnn.py` is functionally the same as `run_model.py`, except this is used to train/test a custom CNN approach instead of IRENE. Notable differences include: Inherit from our `Data` class and create child `DataImageOnly` which overwrites the `__getitem__` method, removal of some arguments in the optimizer within the `train()` function, adjustments to the `item_preds` function.
 
+### File Explanations
+
+* `run.sh`: Commands for model training
+* `predev_eda`: EDA on the structured data files for the CheXpert Dataset
+* `metrics_and_performance`: Performance of various models
+* `attention_heatmap`: Demonstration of what the various models focus on when evaluating input data
+* `run_model`: Main driver code for training and testing of IRENE
+* `run_model_cnn`: Main driver code for training and testing of custom CNN approach
+* `helper.py`: Various helper functions and classes
+* scripts: Scripts to used to generate datasets
+* models: CNN and IRENE architecture
+* data: Location for storing datasets
+
 ## Code Citation
 Code is adapted from [RL4M/IRENE](https://github.com/RL4M/IRENE).
 
