@@ -24,7 +24,7 @@ def train():
     if args.SAVED_MOD is None:
         print("No saved model specified. Training new model.")
         # create model object and optimizer
-        model = IRENE(config, 224, zero_head=True, num_classes=num_classes)
+        model = IRENE(config, 224, zero_head=True, num_classes=num_classes, vis=True)
         set_num = 0
     else:
         print("Continue training model: " + args.SAVED_MOD)
