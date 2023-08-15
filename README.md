@@ -28,7 +28,7 @@ Note: `run_model_cnn.py` is functionally the same as `run_model.py`, except this
 * `run_model`: Main driver code for training and testing of IRENE
 * `run_model_cnn`: Main driver code for training and testing of custom CNN approach
 * `helper.py`: Various helper functions and classes
-* scripts: Scripts to used to generate datasets
+* scripts: Scripts used to generate datasets
 * models: CNN and IRENE architecture
 * data: Location for storing datasets
 * notebooks: Various jupyter notebooks
